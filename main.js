@@ -3,6 +3,7 @@ const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const log = require('electron-log');
 const { autoUpdater } = require('electron-updater');
+const fs = require('fs');
 
 let mainWindow;
 
@@ -88,9 +89,6 @@ ipcMain.on('log-message', (event, message) => {
   log.info(message);
 });
 
-
-const fs = require('fs');
-
 ipcMain.handle('save-and-write-file', async (event, defaultPath, data) => {
   const { canceled, filePath } = await dialog.showSaveDialog({
     title: 'Сохранить Excel файл',
@@ -106,4 +104,32 @@ ipcMain.handle('save-and-write-file', async (event, defaultPath, data) => {
     return filePath;
   }
   return null;
+});
+
+// Путь к файлу настроек
+const settingsPath = path.join(app.getPath('userData'), 'settings.json');
+
+// Обработчик для загрузки настроек
+ipcMain.handle('load-settings', async (event) => {
+  try {
+    if (fs.existsSync(settingsPath)) {
+      const data = fs.readFileSync(settingsPath, 'utf8');
+      return JSON.parse(data);
+    }
+    return null;
+  } catch (error) {
+    log.error('Ошибка при загрузке настроек:', error);
+    return null;
+  }
+});
+
+// Обработчик для сохранения настроек
+ipcMain.handle('save-settings', async (event, settings) => {
+  try {
+    fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2), 'utf8');
+    return true;
+  } catch (error) {
+    log.error('Ошибка при сохранении настроек:', error);
+    return false;
+  }
 });
